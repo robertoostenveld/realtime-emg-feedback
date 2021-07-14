@@ -3,7 +3,8 @@
 switch getenv('USER')
   case 'roboos'
     addpath(fileparts(mfilename('fullpath')));
-    addpath /Users/roboos/matlab/liblsl-1.14.0/bin
+    addpath('/Users/roboos/matlab/liblsl-1.14.0');
+    addpath('/Users/roboos/matlab/liblsl-1.14.0/bin');
     addpath('/Users/roboos/matlab/fieldtrip/preproc');
     
   otherwise

@@ -16,20 +16,21 @@ end
 disp('Opening an inlet...');
 inlet = lsl_inlet(result{1});
 
-% show some information about the stream
-inf = inlet.info();
-inf.as_xml()
+%% show some information about the EEG stream
+info = inlet.info();
+info.as_xml()
 
-% inf.name
-% inf.type
-nchan = inf.channel_count;
-fsample = inf.nominal_srate;
-% inf.channel_format
-% inf.source_id
-% inf.version
-% inf.created_at
-% inf.uid
-% inf.session_id
+nchan = info.channel_count;
+fsample = info.nominal_srate;
+
+%% create a new outlet
+disp('Opening an outlet...');
+info = lsl_streaminfo(lib, 'feedback', 'Markers', nchan, 0, 'cf_float32', 'id28347645');
+info.as_xml()
+outlet = lsl_outlet(info);
+
+
+%% start processing the data
 
 dat = [];
 ylim = [-1000 1000];
@@ -48,10 +49,10 @@ bsfiltord = 4;
 bpfreq = nan; % [55 100];
 bpfiltord = 4;
 
-disp('Now receiving chunked data...');
+disp('Receiving chunked data...');
 while true
   % get chunk from the inlet
-  [chunk,stamps] = inlet.pull_chunk();
+  [chunk, stamps] = inlet.pull_chunk();
   [nchan, nsample] = size(chunk);
   
   if nsample==0
@@ -63,8 +64,8 @@ while true
     % this is only for the first time
     dat = zeros(nchan, bufsize);
     tim = zeros(1,     bufsize);
-    sample = 1;
-    prevsample = 1;
+    begsample = 1;
+    endsample = begsample + nsample - 1;
     
     % initialize the filter
     if ~isnan(hpfreq)
@@ -99,37 +100,16 @@ while true
     [bstate, chunk] = ft_preproc_online_filter_apply(bpstate, chunk);
   end
   
-  begsample = sample;
-  endsample = sample+nsample-1;
-  
   % append the data to the end of the buffer
   dat = [dat(:,nsample+1:end) chunk];
   tim = [tim(1,nsample+1:end) (begsample:endsample)/fsample];
   
-  if (sample-prevsample)>fsample/10
-    % redraw the figure if there are sufficient new samples
-    prevsample = sample;
-    
-    switch figstyle
-      case 'rms'
-        bar(1:nchan, sqrt(mean(dat.^2, 2)))
-        ax = axis;
-        ax(3) = 0;
-        ax(4) = max(ylim);
-        axis(ax);
-        
-      case 'timecourse'
-        for i=1:nchan
-          subplot(nchan,1,i);
-          plot(tim, dat(i,:));
-          axis([tim(1) tim(end) ylim(1) ylim(2)]);
-        end
-    end
-    
-    drawnow
-  end
+  % compute RMS and send it as a stream, another computer can do something with it
+  rms = sqrt(mean(dat.^2,2));
+  outlet.push_sample(rms);
+  disp(rms')
   
-  sample = endsample+1;
-  disp(sample)
+  begsample = begsample + nsample;
+  endsample = endsample + nsample;
   
 end
