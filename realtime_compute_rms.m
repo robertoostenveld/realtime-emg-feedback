@@ -16,7 +16,7 @@ end
 disp('Opening an inlet...');
 inlet = lsl_inlet(result{1});
 
-%% show some information about the EEG stream
+%% show some information about the stream
 info = inlet.info();
 info.as_xml()
 
@@ -25,17 +25,11 @@ fsample = info.nominal_srate;
 
 %% create a new outlet
 disp('Opening an outlet...');
-info = lsl_streaminfo(lib, 'feedback', 'Markers', nchan, 0, 'cf_float32', 'id28347645');
+info = lsl_streaminfo(lib, 'rms', 'Markers', nchan, 0, 'cf_float32', 'id28347645');
 info.as_xml()
 outlet = lsl_outlet(info);
 
-
 %% start processing the data
-
-dat = [];
-ylim = [-1000 1000];
-bufsize = 5*fsample;
-figstyle = 'timecourse';
 
 hpfreq = nan;
 hpfiltord = 4;
@@ -49,7 +43,7 @@ bsfiltord = 4;
 bpfreq = nan; % [55 100];
 bpfiltord = 4;
 
-disp('Receiving chunked data...');
+disp('Receiving timeseries data...');
 while true
   % get chunk from the inlet
   [chunk, stamps] = inlet.pull_chunk();
